@@ -3,7 +3,10 @@
 # Monitoring script for Language Learning AI Companion
 # Shows logs, status, and resource usage
 
-APP_DIR="/home/ec2-user/language-learning-ai-companion"
+# Detect the current user and home directory
+CURRENT_USER=$(whoami)
+HOME_DIR=$(eval echo ~$CURRENT_USER)
+APP_DIR="$HOME_DIR/language-learning-ai-companion"
 
 if [ ! -d "$APP_DIR" ]; then
     echo "❌ Application directory not found."

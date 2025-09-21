@@ -7,7 +7,10 @@ set -e
 
 echo "🔄 Updating Language Learning AI Companion..."
 
-APP_DIR="/home/ec2-user/language-learning-ai-companion"
+# Detect the current user and home directory
+CURRENT_USER=$(whoami)
+HOME_DIR=$(eval echo ~$CURRENT_USER)
+APP_DIR="$HOME_DIR/language-learning-ai-companion"
 
 if [ ! -d "$APP_DIR" ]; then
     echo "❌ Application directory not found. Please run deploy-ec2.sh first."
@@ -18,7 +21,7 @@ cd "$APP_DIR"
 
 # Pull latest changes
 echo "📦 Pulling latest changes..."
-git pull origin main
+git pull origin main || git pull origin master
 
 # Rebuild and restart
 echo "🔨 Rebuilding Docker images..."

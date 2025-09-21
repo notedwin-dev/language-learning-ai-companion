@@ -19,7 +19,11 @@ This guide will help you deploy the Language Learning AI Companion on AWS EC2 us
 
 ### 1. Connect to Your EC2 Instance
 ```bash
+# For Amazon Linux
 ssh -i your-key.pem ec2-user@your-ec2-public-ip
+
+# For Ubuntu
+ssh -i your-key.pem ubuntu@your-ec2-public-ip
 ```
 
 ### 2. Run the Deployment Script
@@ -40,6 +44,8 @@ chmod +x scripts/*.sh
 # Run deployment
 ./scripts/deploy-ec2.sh
 ```
+
+**Note**: The script automatically detects your OS (Amazon Linux or Ubuntu) and installs Docker accordingly. After Docker installation, you may need to log out and back in for group permissions to take effect.
 
 ### 3. Configure Environment Variables
 Edit the `.env` file with your AWS credentials:
