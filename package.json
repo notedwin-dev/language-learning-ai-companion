@@ -7,7 +7,7 @@
     "dev": "concurrently \"cd frontend && npm run dev\" \"cd backend && nodemon server.js\"",
     "build": "next build",
     "start": "next start",
-    "start:docker": "concurrently \"cd frontend && npm start\" \"cd backend && node server.js\"",
+    "start:docker": "concurrently \"cd frontend && PORT=3000 npm start\" \"cd backend && PORT=5000 node server.js\"",
     "lint": "eslint",
     "lint:fix": "eslint --fix"
   },
