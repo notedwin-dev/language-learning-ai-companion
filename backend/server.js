@@ -137,10 +137,33 @@ Keep the explanation informative but accessible, around 100-150 words. Write in 
     }
 
     const responseBody = JSON.parse(new TextDecoder().decode(modelResponse.body));
-    const explanation = responseBody.choices?.[0]?.message?.content || 
-                       responseBody.content?.[0]?.text || 
-                       responseBody.outputText || 
-                       'Explanation generated successfully.';
+    console.log('Full response body:', JSON.stringify(responseBody, null, 2));
+
+    // Try multiple ways to extract the content
+    let explanation = null;
+
+    // DeepSeek R1 format: choices[0].message.content
+    if (responseBody.choices?.[0]?.message?.content) {
+      explanation = responseBody.choices[0].message.content;
+      console.log('Found explanation in choices[0].message.content');
+    }
+    // Alternative formats
+    else if (responseBody.content?.[0]?.text) {
+      explanation = responseBody.content[0].text;
+      console.log('Found explanation in content[0].text');
+    }
+    else if (responseBody.outputText) {
+      explanation = responseBody.outputText;
+      console.log('Found explanation in outputText');
+    }
+    else if (responseBody.text) {
+      explanation = responseBody.text;
+      console.log('Found explanation in text');
+    }
+    else {
+      console.log('No explanation found in expected fields, using fallback');
+      explanation = `This ${language} sentence "${sentence}" means "${translation}". It's commonly used in ${scenario} settings and is appropriate for this conversational context.`;
+    }
 
     res.json({ explanation });
   } catch (error) {
