@@ -1,4 +1,63 @@
-export const drawMap = (ctx, backgroundSrc, collisionMap, tileSize) => {
+import { TileMap, createPlaceholderTileMap } from './TileMap';
+
+/**
+ * Draw a map using either a TileMap or a simple collision-based map
+ * 
+ * @param {CanvasRenderingContext2D} ctx - The canvas context to draw on
+ * @param {string|TileMap} map - The map to draw (either a TileMap instance or a path to a background image)
+ * @param {Array} collisionMap - 2D array of collision data (used only if map is not a TileMap)
+ * @param {number} tileSize - Size of each tile in pixels
+ * @param {Object} options - Drawing options
+ */
+export const drawMap = async (ctx, map, collisionMap, tileSize, options = {}) => {
+  // If the map is a TileMap instance, use it
+  if (map instanceof TileMap) {
+    // Wait for the tilemap to load if needed
+    if (!map.loaded) {
+      try {
+        await map.waitForLoad();
+      } catch (error) {
+        console.error('Failed to load tilemap:', error);
+        drawFallbackMap(ctx, collisionMap, tileSize);
+        return;
+      }
+    }
+
+    // Draw the tilemap
+    map.draw(ctx, {
+      showCollision: options.showCollision || false,
+      drawBackground: true,
+      drawForeground: true
+    });
+    return;
+  }
+
+  // Fall back to the old drawing method
+  drawFallbackMap(ctx, collisionMap, tileSize);
+};
+
+/**
+ * Create a TileMap from a collision map
+ * 
+ * @param {Array} collisionMap - 2D array of collision data
+ * @param {number} tileSize - Size of each tile in pixels
+ * @returns {TileMap} A new TileMap instance
+ */
+export const createMapFromCollision = (collisionMap, tileSize) => {
+  const height = collisionMap.length;
+  const width = collisionMap[0].length;
+
+  return createPlaceholderTileMap(width, height, tileSize, collisionMap);
+};
+
+/**
+ * Draw a simple map based on a collision map (fallback method)
+ * 
+ * @param {CanvasRenderingContext2D} ctx - The canvas context to draw on
+ * @param {Array} collisionMap - 2D array of collision data
+ * @param {number} tileSize - Size of each tile in pixels
+ */
+const drawFallbackMap = (ctx, collisionMap, tileSize) => {
   // We'll use a simple approach for now - later we can implement proper tilemap rendering
   
   // Draw the background (temporary placeholder)

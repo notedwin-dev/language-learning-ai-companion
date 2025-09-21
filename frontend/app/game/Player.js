@@ -14,6 +14,31 @@ class Player {
 
   // Collision detection
   wouldCollide(newX, newY, collisionMap, tileSize) {
+    // Support both TileMap objects and traditional collision arrays
+    if (collisionMap && typeof collisionMap.hasCollisionAt === 'function') {
+      // If we have a TileMap, use its collision detection
+      // Check corners of the player hitbox against the collision map
+      const corners = [
+        { x: newX + 2, y: newY + 2 },                    // Top-left (with 2px buffer)
+        { x: newX + this.width - 2, y: newY + 2 },       // Top-right (with 2px buffer)
+        { x: newX + 2, y: newY + this.height - 2 },      // Bottom-left (with 2px buffer)
+        { x: newX + this.width - 2, y: newY + this.height - 2 } // Bottom-right (with 2px buffer)
+      ];
+
+      // Check each corner against the tilemap
+      for (const corner of corners) {
+        if (collisionMap.hasCollisionAt(corner.x, corner.y)) {
+          if (window.debugMode) {
+            console.log(`Collision at pixel [${corner.x}, ${corner.y}]`);
+          }
+          return true;
+        }
+      }
+
+      return false; // No collision detected with tilemap
+    }
+
+    // Legacy collision detection with 2D array
     // Check if collisionMap exists
     if (!collisionMap || !Array.isArray(collisionMap)) {
       console.error('Invalid collision map:', collisionMap);

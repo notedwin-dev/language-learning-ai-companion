@@ -1,14 +1,19 @@
-import React from 'react';
-import './globals.css';
+"use client";
+
+import React from "react";
+import "./globals.css";
+import { GameProvider } from "./game/GameContext";
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <GameProvider>{children}</GameProvider>
+      </body>
     </html>
-  )
+  );
 }
