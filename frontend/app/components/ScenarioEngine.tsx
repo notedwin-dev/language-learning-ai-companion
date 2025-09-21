@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SoundIcon, MicrophoneIcon } from './Icons';
+import API_CONFIG from "../config/apiConfig";
 
 interface DialogueOption {
   id: string;
@@ -28,17 +29,17 @@ interface SceneData {
 }
 
 interface ScenarioEngineProps {
-  language: 'mandarin' | 'malay' | 'cantonese';
-  scenario: 'restaurant' | 'market' | 'directions';
+  language: "mandarin" | "malay" | "cantonese";
+  scenario: "restaurant" | "market" | "directions";
   onComplete: (score: number) => void;
   onExit: () => void;
 }
 
-const ScenarioEngine: React.FC<ScenarioEngineProps> = ({ 
-  language, 
-  scenario, 
-  onComplete, 
-  onExit 
+const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
+  language,
+  scenario,
+  onComplete,
+  onExit,
 }) => {
   const [currentScene, setCurrentScene] = useState<string>("start");
   const [score, setScore] = useState<number>(0);
@@ -1129,14 +1130,14 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
     // Set up learning mode for this option
     setSelectedOption(option);
     setShowLearningMode(true);
-    setAiExplanation('');
-    
+    setAiExplanation("");
+
     // Reset pronunciation state
     setPronunciationScore(null);
-    setPronunciationFeedback('');
+    setPronunciationFeedback("");
     setRecordedAudio(null);
     setCountdown(null);
-    
+
     generateAIExplanation(option);
   };
 
@@ -1166,7 +1167,10 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
     // Move to next scene or complete
     if (selectedOption.nextScene === "complete" || !selectedOption.nextScene) {
       setTimeout(() => onComplete(score + selectedOption.points), 1000);
-    } else if (selectedOption.nextScene && scenarioData[selectedOption.nextScene]) {
+    } else if (
+      selectedOption.nextScene &&
+      scenarioData[selectedOption.nextScene]
+    ) {
       setTimeout(() => {
         setCurrentScene(selectedOption.nextScene!);
         // Add NPC response to history
@@ -1185,7 +1189,7 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
 
   const generateAIExplanation = async (option: DialogueOption) => {
     setIsGeneratingExplanation(true);
-    
+
     try {
       // Create a contextual explanation request
       const explanationPrompt = {
@@ -1196,27 +1200,33 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
         culturalNote: option.culturalNote,
         context: currentSceneData?.background,
         npcDialogue: currentSceneData?.npcDialogue,
-        scenario: scenario
+        scenario: scenario,
       };
 
-      const response = await fetch('http://localhost:5000/api/generate-explanation', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(explanationPrompt),
-      });
+      const response = await fetch(
+        `${API_CONFIG.API_BASE_URL}/api/generate-explanation`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(explanationPrompt),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Explanation generation failed: ${response.status}`);
       }
 
       const result = await response.json();
-      setAiExplanation(result.explanation || 'Explanation generated successfully.');
-      
+      setAiExplanation(
+        result.explanation || "Explanation generated successfully."
+      );
     } catch (error) {
-      console.error('Error generating explanation:', error);
-      setAiExplanation('Unable to generate explanation at this time. Please try again.');
+      console.error("Error generating explanation:", error);
+      setAiExplanation(
+        "Unable to generate explanation at this time. Please try again."
+      );
     } finally {
       setIsGeneratingExplanation(false);
     }
@@ -1238,17 +1248,20 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
 
     try {
       // Try AWS Polly first for higher quality
-      const response = await fetch("http://localhost:5000/api/text-to-speech", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: text,
-          voiceId: getVoiceIdForLanguage(language),
-          engine: "neural",
-        }),
-      });
+      const response = await fetch(
+        `${API_CONFIG.API_BASE_URL}/api/text-to-speech`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text: text,
+            voiceId: getVoiceIdForLanguage(language),
+            engine: "neural",
+          }),
+        }
+      );
 
       if (
         response.ok &&
@@ -1413,12 +1426,16 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
 
   // Auto-proceed when pronunciation score is good enough
   useEffect(() => {
-    if (showLearningMode && pronunciationScore !== null && pronunciationScore >= 0.6) {
+    if (
+      showLearningMode &&
+      pronunciationScore !== null &&
+      pronunciationScore >= 0.6
+    ) {
       // Start countdown from 3
       setCountdown(3);
-      
+
       const countdownInterval = setInterval(() => {
-        setCountdown(prev => {
+        setCountdown((prev) => {
           if (prev === null || prev <= 1) {
             clearInterval(countdownInterval);
             proceedToNextScene();
@@ -1491,7 +1508,7 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
       formData.append("languageCode", getLanguageCodeForTranscribe(language));
 
       const transcribeResponse = await fetch(
-        "http://localhost:5000/api/speech-to-text",
+        `${API_CONFIG.API_BASE_URL}/api/speech-to-text`,
         {
           method: "POST",
           body: formData,
@@ -1524,7 +1541,7 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
 
       // Fetch transcription text from the backend
       const transcriptionResponse = await fetch(
-        `http://localhost:5000/api/speech-to-text/job/${jobName}/signed-url`
+        `${API_CONFIG.API_BASE_URL}/api/speech-to-text/job/${jobName}/signed-url`
       );
 
       if (!transcriptionResponse.ok) {
@@ -1537,7 +1554,7 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
 
       // Now check pronunciation accuracy
       const pronunciationResponse = await fetch(
-        "http://localhost:5000/api/check-pronunciation",
+        `${API_CONFIG.API_BASE_URL}/api/check-pronunciation`,
         {
           method: "POST",
           headers: {
@@ -1603,9 +1620,8 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         const url = isMock
-          ? `http://localhost:5000/api/speech-to-text/job/${jobName}?isMock=true`
-          : `http://localhost:5000/api/speech-to-text/job/${jobName}`;
-
+          ? `${API_CONFIG.API_BASE_URL}/api/speech-to-text/job/${jobName}?isMock=true`
+          : `${API_CONFIG.API_BASE_URL}/api/speech-to-text/job/${jobName}`;
         const response = await fetch(url);
         const result = await response.json();
 
@@ -1840,60 +1856,75 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              >
+                className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-gray-800 rounded-2xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                   <div className="text-center mb-6">
                     <h2 className="text-2xl font-bold text-yellow-400 mb-2">
                       🎯 Learn This Response
                     </h2>
-                    <p className="text-gray-300">Practice and understand what you're saying</p>
+                    <p className="text-gray-300">
+                      Practice and understand what you're saying
+                    </p>
                   </div>
 
                   {/* Selected Option Display */}
                   <div className="bg-gray-700/50 rounded-lg p-4 mb-6">
-                    <h3 className="text-lg font-bold text-purple-300 mb-3">Your Response:</h3>
+                    <h3 className="text-lg font-bold text-purple-300 mb-3">
+                      Your Response:
+                    </h3>
                     <div className="bg-gradient-to-r from-purple-600/30 to-blue-600/30 rounded-lg p-4">
-                      <p className="text-xl font-medium mb-2">{selectedOption.text}</p>
+                      <p className="text-xl font-medium mb-2">
+                        {selectedOption.text}
+                      </p>
                       {selectedOption.pronunciation && (
-                        <p className="text-gray-300 italic text-sm mb-2">{selectedOption.pronunciation}</p>
+                        <p className="text-gray-300 italic text-sm mb-2">
+                          {selectedOption.pronunciation}
+                        </p>
                       )}
-                      <p className="text-gray-200 text-sm mb-3">"{selectedOption.translation}"</p>
-                      
+                      <p className="text-gray-200 text-sm mb-3">
+                        "{selectedOption.translation}"
+                      </p>
+
                       {/* Pronunciation Practice */}
                       <div className="flex items-center space-x-3 mb-4">
                         <button
                           onClick={() => playAudio(selectedOption.text)}
                           className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg flex items-center space-x-2"
-                          disabled={isPlaying}
-                        >
+                          disabled={isPlaying}>
                           <SoundIcon className="w-4 h-4" />
-                          <span>{isPlaying ? 'Playing...' : 'Listen'}</span>
+                          <span>{isPlaying ? "Playing..." : "Listen"}</span>
                         </button>
-                        
+
                         <button
                           onClick={isRecording ? stopRecording : startRecording}
                           className={`px-4 py-2 rounded-lg flex items-center space-x-2 ${
-                            isRecording 
-                              ? 'bg-red-700 hover:bg-red-800 animate-pulse' 
-                              : 'bg-red-600 hover:bg-red-700'
-                          }`}
-                        >
+                            isRecording
+                              ? "bg-red-700 hover:bg-red-800 animate-pulse"
+                              : "bg-red-600 hover:bg-red-700"
+                          }`}>
                           <MicrophoneIcon className="w-4 h-4" />
-                          <span>{isRecording ? 'Stop Recording' : 'Record Yourself'}</span>
+                          <span>
+                            {isRecording ? "Stop Recording" : "Record Yourself"}
+                          </span>
                         </button>
 
                         {recordedAudio && (
                           <button
-                            onClick={() => checkPronunciation({
-                              chinese: selectedOption.text,
-                              cantonese: selectedOption.pronunciation,
-                              english: selectedOption.translation,
-                            }, recordedAudio)}
+                            onClick={() =>
+                              checkPronunciation(
+                                {
+                                  chinese: selectedOption.text,
+                                  cantonese: selectedOption.pronunciation,
+                                  english: selectedOption.translation,
+                                },
+                                recordedAudio
+                              )
+                            }
                             className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg"
-                            disabled={isCheckingPronunciation}
-                          >
-                            {isCheckingPronunciation ? 'Checking...' : 'Check Pronunciation'}
+                            disabled={isCheckingPronunciation}>
+                            {isCheckingPronunciation
+                              ? "Checking..."
+                              : "Check Pronunciation"}
                           </button>
                         )}
                       </div>
@@ -1902,38 +1933,54 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
                       {pronunciationScore !== null && (
                         <div className="bg-gray-600/50 rounded p-3 mb-4">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium">Pronunciation Score:</span>
-                            <span className={`font-bold ${
-                              pronunciationScore >= 0.8 ? 'text-green-400' : 
-                              pronunciationScore >= 0.6 ? 'text-yellow-400' : 'text-red-400'
-                            }`}>
+                            <span className="text-sm font-medium">
+                              Pronunciation Score:
+                            </span>
+                            <span
+                              className={`font-bold ${
+                                pronunciationScore >= 0.8
+                                  ? "text-green-400"
+                                  : pronunciationScore >= 0.6
+                                  ? "text-yellow-400"
+                                  : "text-red-400"
+                              }`}>
                               {Math.round(pronunciationScore * 100)}%
                             </span>
                           </div>
                           <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
-                            <div 
+                            <div
                               className={`h-2 rounded-full transition-all duration-500 ${
-                                pronunciationScore >= 0.8 ? 'bg-green-400' : 
-                                pronunciationScore >= 0.6 ? 'bg-yellow-400' : 'bg-red-400'
+                                pronunciationScore >= 0.8
+                                  ? "bg-green-400"
+                                  : pronunciationScore >= 0.6
+                                  ? "bg-yellow-400"
+                                  : "bg-red-400"
                               }`}
-                              style={{ width: `${pronunciationScore * 100}%` }}
-                            ></div>
+                              style={{
+                                width: `${pronunciationScore * 100}%`,
+                              }}></div>
                           </div>
                           {pronunciationFeedback && (
-                            <p className="text-sm text-gray-300 mb-2">{pronunciationFeedback}</p>
+                            <p className="text-sm text-gray-300 mb-2">
+                              {pronunciationFeedback}
+                            </p>
                           )}
-                          
+
                           {/* Success/Failure Message */}
                           {pronunciationScore >= 0.6 ? (
                             <div className="bg-green-900/30 border border-green-600/50 rounded p-2 mb-2">
                               <p className="text-green-300 text-sm font-medium">
-                                ✅ Great pronunciation! {countdown !== null ? `Proceeding in ${countdown}s...` : 'Proceeding to next scene...'}
+                                ✅ Great pronunciation!{" "}
+                                {countdown !== null
+                                  ? `Proceeding in ${countdown}s...`
+                                  : "Proceeding to next scene..."}
                               </p>
                             </div>
                           ) : (
                             <div className="bg-red-900/30 border border-red-600/50 rounded p-2 mb-2">
                               <p className="text-red-300 text-sm font-medium">
-                                🔄 Try again! Practice the pronunciation and record again to improve your score.
+                                🔄 Try again! Practice the pronunciation and
+                                record again to improve your score.
                               </p>
                             </div>
                           )}
@@ -1943,7 +1990,8 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
                       {selectedOption.culturalNote && (
                         <div className="bg-yellow-900/30 border border-yellow-600/50 rounded-lg p-3">
                           <p className="text-yellow-300 text-sm">
-                            💡 <strong>Cultural Note:</strong> {selectedOption.culturalNote}
+                            💡 <strong>Cultural Note:</strong>{" "}
+                            {selectedOption.culturalNote}
                           </p>
                         </div>
                       )}
@@ -1953,19 +2001,20 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
                   {/* AI Explanation */}
                   <div className="bg-gray-700/50 rounded-lg p-4 mb-6">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-lg font-bold text-green-400">🤖 AI Explanation</h3>
+                      <h3 className="text-lg font-bold text-green-400">
+                        🤖 AI Explanation
+                      </h3>
                       {aiExplanation && (
                         <button
                           onClick={() => playAudio(aiExplanation)}
                           className="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm flex items-center space-x-1"
-                          disabled={isPlaying}
-                        >
+                          disabled={isPlaying}>
                           <SoundIcon className="w-3 h-3" />
                           <span>Listen to Explanation</span>
                         </button>
                       )}
                     </div>
-                    
+
                     {isGeneratingExplanation ? (
                       <div className="flex items-center space-x-2 text-gray-400">
                         <div className="animate-spin w-4 h-4 border-2 border-green-400 border-t-transparent rounded-full"></div>
@@ -1973,7 +2022,9 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
                       </div>
                     ) : aiExplanation ? (
                       <div className="bg-gray-600/30 rounded p-3">
-                        <p className="text-gray-200 leading-relaxed">{aiExplanation}</p>
+                        <p className="text-gray-200 leading-relaxed">
+                          {aiExplanation}
+                        </p>
                       </div>
                     ) : (
                       <div className="text-gray-400 italic">
@@ -1990,31 +2041,29 @@ const ScenarioEngine: React.FC<ScenarioEngineProps> = ({
                         setSelectedOption(null);
                         setCountdown(0);
                       }}
-                      className="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg text-white font-medium"
-                    >
+                      className="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg text-white font-medium">
                       Cancel
                     </button>
-                    
+
                     <div className="flex space-x-3">
                       <button
                         onClick={() => generateAIExplanation(selectedOption)}
                         className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg text-white font-medium"
-                        disabled={isGeneratingExplanation}
-                      >
-                        {isGeneratingExplanation ? 'Generating...' : 'Regenerate Explanation'}
+                        disabled={isGeneratingExplanation}>
+                        {isGeneratingExplanation
+                          ? "Generating..."
+                          : "Regenerate Explanation"}
                       </button>
-                      
+
                       <button
                         onClick={proceedToNextScene}
-                        className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg text-white font-medium"
-                      >
+                        className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg text-white font-medium">
                         Skip Practice →
                       </button>
-                      
+
                       <button
                         onClick={proceedToNextScene}
-                        className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-white font-medium"
-                      >
+                        className="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg text-white font-medium">
                         Continue →
                       </button>
                     </div>

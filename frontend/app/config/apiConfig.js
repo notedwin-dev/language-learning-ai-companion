@@ -1,8 +1,8 @@
 // API configuration
 const API_CONFIG = {
   // Base URL for backend API requests
-  // Change this to match your backend server address and port
-  API_BASE_URL: 'http://localhost:5000',
+  // In production with nginx proxy, use relative URLs to avoid CORS issues
+  API_BASE_URL: process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000',
   
   // Config options
   options: {
