@@ -1,17 +1,83 @@
 version: "3.9"
+
 services:
-  postgres:
-    image: postgres:15
-    container_name: postgres-db
-    restart: always
+  # Main application service
+  language-learning-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: language-learning-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # Frontend Next.js
+      - "5000:5000"  # Backend Express.js
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
+      - NODE_ENV=production
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-deepseek.r1-v1:0}
+      - PORT=5000
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    volumes:
+      - app_uploads:/app/backend/uploads
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "node", "backend/healthcheck.js"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL database (optional - remove if not using database)
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-languageapp}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_DB: ${POSTGRES_DB:-languagelearning}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-languageapp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nginx reverse proxy (optional - for production load balancing)
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - language-learning-app
+    networks:
+      - app_network
 
 volumes:
   postgres_data:
+    driver: local
+  app_uploads:
+    driver: local
+
+networks:
+  app_network:
+    driver: bridge

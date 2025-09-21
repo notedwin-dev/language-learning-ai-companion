@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  # Development version - simplified for local development
+  language-learning-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: language-learning-app-dev
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  # Frontend Next.js
+      - "5000:5000"  # Backend Express.js
+    environment:
+      - NODE_ENV=development
+      - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
+      - AWS_SECRET_KEY=${AWS_SECRET_KEY}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-deepseek.r1-v1:0}
+      - PORT=5000
+    env_file:
+      - .env
+    volumes:
+      - ./backend/uploads:/app/backend/uploads
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

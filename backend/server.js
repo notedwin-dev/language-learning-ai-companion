@@ -175,6 +175,15 @@ Keep the explanation informative but accessible, around 100-150 words. Write in 
   }
 });
 
+// Health check endpoint for Docker
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
 // Endpoint to handle text input and return AI-generated response
 app.post('/api/message', async (req, res) => {
     const userMessage = req.body.message;
