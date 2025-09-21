@@ -8,10 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // AWS SDK clients
-import { BedrockClient, InvokeModelCommand } from '@aws-sdk/client-bedrock';
-import { PollyClient, SynthesizeSpeechCommand } from '@aws-sdk/client-polly';
-import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand } from '@aws-sdk/client-transcribe';
-import { v4 as uuidv4 } from 'uuid';
+import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import multer from 'multer';
 
 // Import routes
@@ -43,17 +40,7 @@ const credentials = {
     secretAccessKey: process.env.AWS_SECRET_KEY
 };
 
-const bedrockClient = new BedrockClient({
-    region: awsRegion,
-    credentials: credentials
-});
-
-const pollyClient = new PollyClient({
-    region: awsRegion,
-    credentials: credentials
-});
-
-const transcribeClient = new TranscribeClient({
+const bedrockClient = new BedrockRuntimeClient({
     region: awsRegion,
     credentials: credentials
 });
@@ -91,26 +78,69 @@ Please explain:
 
 Keep the explanation informative but accessible, around 100-150 words. Write in the native language (${language}) if possible, otherwise in English.`;
 
-    const command = new InvokeModelCommand({
-      modelId: bedrockModelId,
-      body: JSON.stringify({
-        messages: [
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        max_tokens: 500,
-        temperature: 0.7,
-        anthropic_version: "bedrock-2023-05-31"
-      }),
-      contentType: 'application/json',
-      accept: 'application/json'
-    });
+    // Use inference profile approach like the pronunciation checking
+    const possibleModelIds = [
+      'arn:aws:bedrock:us-east-1:335965711506:inference-profile/us.deepseek.r1-v1:0',  // Confirmed working ARN from playground
+      'us.deepseek.r1-v1:0',  // Regional inference profile
+      process.env.BEDROCK_MODEL_ID || 'deepseek.r1-v1:0'  // Fallback to env variable
+    ];
+    
+    let modelResponse = null;
+    let lastError = null;
 
-    const response = await bedrockClient.send(command);
-    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-    const explanation = responseBody.content?.[0]?.text || 'Explanation generated successfully.';
+    // DeepSeek R1 payload format
+    const payload = {
+      messages: [
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+      top_p: 0.9
+    };
+
+    // Try different model IDs until one works
+    for (const modelId of possibleModelIds) {
+      try {
+        console.log(`Trying explanation generation with model ID: ${modelId}`);
+        
+        const command = new InvokeModelCommand({
+          modelId: modelId,
+          contentType: 'application/json',
+          accept: 'application/json',
+          body: JSON.stringify(payload)
+        });
+
+        const response = await bedrockClient.send(command);
+        modelResponse = response;
+        console.log(`Success with model ID: ${modelId}`);
+        break; // Exit loop if successful
+        
+      } catch (modelError) {
+        console.log(`Failed with model ID ${modelId}:`, modelError.message);
+        lastError = modelError;
+        
+        // If this is the last attempt, we'll use the fallback
+        if (modelId === possibleModelIds[possibleModelIds.length - 1]) {
+          throw modelError;
+        }
+        
+        // Continue to next model ID
+        continue;
+      }
+    }
+
+    if (!modelResponse) {
+      throw lastError || new Error('All model IDs failed');
+    }
+
+    const responseBody = JSON.parse(new TextDecoder().decode(modelResponse.body));
+    const explanation = responseBody.choices?.[0]?.message?.content || 
+                       responseBody.content?.[0]?.text || 
+                       responseBody.outputText || 
+                       'Explanation generated successfully.';
 
     res.json({ explanation });
   } catch (error) {
