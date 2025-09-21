@@ -8,12 +8,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 // AWS SDK clients
-import bedrockPkg from '@aws-sdk/client-bedrock';
-const { BedrockClient, InvokeModelCommand } = bedrockPkg;
-import pollyPkg from '@aws-sdk/client-polly';
-const { PollyClient, SynthesizeSpeechCommand } = pollyPkg;
-import transcribePkg from '@aws-sdk/client-transcribe';
-const { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand } = transcribePkg;
+import { BedrockClient, InvokeModelCommand } from '@aws-sdk/client-bedrock';
+import { PollyClient, SynthesizeSpeechCommand } from '@aws-sdk/client-polly';
+import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand } from '@aws-sdk/client-transcribe';
 import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 
@@ -65,6 +62,65 @@ const transcribeClient = new TranscribeClient({
 app.use('/api/speech-to-text', speechToTextRoutes);
 app.use('/api/text-to-speech', textToSpeechRoutes);
 app.use('/api/check-pronunciation', checkPronunciationRoutes);
+
+// Endpoint to generate AI explanation for language learning
+app.post('/api/generate-explanation', async (req, res) => {
+  const { language, sentence, pronunciation, translation, culturalNote, context, npcDialogue, scenario } = req.body;
+
+  if (!language || !sentence || !translation) {
+    return res.status(400).json({ error: 'Language, sentence, and translation are required' });
+  }
+
+  try {
+    // Create a comprehensive prompt for explanation
+    const prompt = `You are a helpful language learning assistant. Provide a detailed explanation about this ${language} sentence in a conversational, educational tone.
+
+Sentence: "${sentence}"
+${pronunciation ? `Pronunciation: ${pronunciation}` : ''}
+Translation: "${translation}"
+${culturalNote ? `Cultural Context: ${culturalNote}` : ''}
+Scenario: ${scenario} setting
+Context: The speaker just responded to "${npcDialogue}" in a ${context}
+
+Please explain:
+1. The meaning and context of this sentence
+2. When and how to use it appropriately
+3. Any grammar patterns or key vocabulary
+4. Cultural significance if applicable
+5. Alternative ways to express the same idea
+
+Keep the explanation informative but accessible, around 100-150 words. Write in the native language (${language}) if possible, otherwise in English.`;
+
+    const command = new InvokeModelCommand({
+      modelId: bedrockModelId,
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+        anthropic_version: "bedrock-2023-05-31"
+      }),
+      contentType: 'application/json',
+      accept: 'application/json'
+    });
+
+    const response = await bedrockClient.send(command);
+    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+    const explanation = responseBody.content?.[0]?.text || 'Explanation generated successfully.';
+
+    res.json({ explanation });
+  } catch (error) {
+    console.error('Error generating explanation:', error);
+    res.status(500).json({
+      error: 'Error generating explanation',
+      explanation: `This ${language} sentence "${sentence}" means "${translation}". It's commonly used in ${scenario} settings and is appropriate for this conversational context.`
+    });
+  }
+});
 
 // Endpoint to handle text input and return AI-generated response
 app.post('/api/message', async (req, res) => {
