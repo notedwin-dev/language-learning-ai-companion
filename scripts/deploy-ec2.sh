@@ -106,17 +106,26 @@ fi
 
 # Build and start the application
 echo "🔨 Building Docker images..."
-docker-compose -f docker-compose.prod.yml build
+
+# Use docker compose (newer syntax) if available, fallback to docker-compose
+if docker compose version &> /dev/null; then
+    COMPOSE_CMD="docker compose"
+else
+    COMPOSE_CMD="docker-compose"
+fi
+
+echo "Using compose command: $COMPOSE_CMD"
+$COMPOSE_CMD -f docker-compose.prod.yml build
 
 echo "🚀 Starting the application..."
-docker-compose -f docker-compose.prod.yml up -d
+$COMPOSE_CMD -f docker-compose.prod.yml up -d
 
 # Wait for services to be healthy
 echo "⏳ Waiting for services to start..."
 sleep 30
 
 # Check if services are running
-if docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+if $COMPOSE_CMD -f docker-compose.prod.yml ps | grep -q "Up"; then
     echo "✅ Application deployed successfully!"
     echo ""
     echo "🌐 Your application is now running:"
@@ -124,11 +133,14 @@ if docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
     echo "   Backend API: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):5000"
     echo "   Health Check: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4):5000/health"
     echo ""
-    echo "📊 To view logs: docker-compose -f docker-compose.prod.yml logs -f"
-    echo "🛑 To stop: docker-compose -f docker-compose.prod.yml down"
-    echo "🔄 To restart: docker-compose -f docker-compose.prod.yml restart"
+    echo "📊 To view logs: $COMPOSE_CMD -f docker-compose.prod.yml logs -f"
+    echo "🛑 To stop: $COMPOSE_CMD -f docker-compose.prod.yml down"
+    echo "🔄 To restart: $COMPOSE_CMD -f docker-compose.prod.yml restart"
 else
     echo "❌ Deployment failed. Checking logs..."
-    docker-compose -f docker-compose.prod.yml logs
+    $COMPOSE_CMD -f docker-compose.prod.yml logs
+    echo ""
+    echo "🔍 Container status:"
+    $COMPOSE_CMD -f docker-compose.prod.yml ps
     exit 1
 fi

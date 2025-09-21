@@ -15,11 +15,11 @@ COPY frontend/tsconfig.json ./frontend/
 COPY frontend/next-env.d.ts ./frontend/
 
 # Install root dependencies (includes concurrently)
-RUN npm ci --only=production
+RUN npm ci
 
 # Install frontend dependencies
 WORKDIR /app/frontend
-RUN npm ci --only=production
+RUN npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder
